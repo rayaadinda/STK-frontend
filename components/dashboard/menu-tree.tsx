@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
+import { Fragment, type DragEvent, useState } from "react"
+import { ChevronDown, ChevronRight, GripVertical, Pencil, Plus, Trash2 } from "lucide-react"
 
 import type { MenuNode } from "@/components/dashboard/menu-types"
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,20 @@ type MenuTreeProps = {
   onAddChild: (id: string) => void
   onEditNode: (id: string) => void
   onDeleteNode: (id: string) => void
+  onMoveNode: (menuId: string, targetParentId: string | null) => void
+  onReorderNode: (menuId: string, targetParentId: string | null, targetPosition: number) => void
 }
+
+type DropTarget =
+  | {
+      kind: "child"
+      nodeId: string
+    }
+  | {
+      kind: "reorder"
+      parentId: string | null
+      position: number
+    }
 
 export function MenuTree({
   nodes,
@@ -24,15 +38,134 @@ export function MenuTree({
   onAddChild,
   onEditNode,
   onDeleteNode,
+  onMoveNode,
+  onReorderNode,
 }: MenuTreeProps) {
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+
+  const resolveDraggedNodeId = (event: DragEvent): string | null => {
+    const fromState = draggedNodeId
+    if (fromState) {
+      return fromState
+    }
+
+    const fromTransfer = event.dataTransfer.getData("text/plain")
+    return fromTransfer || null
+  }
+
+  const handleDragStart = (event: DragEvent, nodeId: string) => {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", nodeId)
+    setDraggedNodeId(nodeId)
+    setDropTarget(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedNodeId(null)
+    setDropTarget(null)
+  }
+
+  const setDropAsChild = (event: DragEvent, targetNodeId: string) => {
+    const activeDragNodeId = resolveDraggedNodeId(event)
+
+    if (!activeDragNodeId || activeDragNodeId === targetNodeId) {
+      return
+    }
+
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+    setDropTarget({ kind: "child", nodeId: targetNodeId })
+  }
+
+  const setDropAsReorder = (event: DragEvent, parentId: string | null, position: number) => {
+    if (!resolveDraggedNodeId(event)) {
+      return
+    }
+
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+    setDropTarget({ kind: "reorder", parentId, position })
+  }
+
+  const handleDropAsChild = (event: DragEvent, targetNodeId: string) => {
+    event.preventDefault()
+
+    const activeDragNodeId = resolveDraggedNodeId(event)
+    if (!activeDragNodeId || activeDragNodeId === targetNodeId) {
+      handleDragEnd()
+      return
+    }
+
+    onMoveNode(activeDragNodeId, targetNodeId)
+    onSelectNode(activeDragNodeId)
+    handleDragEnd()
+  }
+
+  const handleDropAsReorder = (event: DragEvent, parentId: string | null, position: number) => {
+    event.preventDefault()
+
+    const activeDragNodeId = resolveDraggedNodeId(event)
+    if (!activeDragNodeId) {
+      handleDragEnd()
+      return
+    }
+
+    onReorderNode(activeDragNodeId, parentId, position)
+    onSelectNode(activeDragNodeId)
+    handleDragEnd()
+  }
+
+  const renderReorderDropZone = (parentId: string | null, position: number) => {
+    const isActive =
+      dropTarget?.kind === "reorder" &&
+      dropTarget.parentId === parentId &&
+      dropTarget.position === position
+
+    return (
+      <li
+        key={`drop-zone-${parentId ?? "root"}-${position}`}
+        className="h-2"
+        onDragOver={(event) => setDropAsReorder(event, parentId, position)}
+        onDrop={(event) => handleDropAsReorder(event, parentId, position)}
+      >
+        <div className={cn("h-0.5 rounded-full transition", isActive ? "bg-[#0b5ec8]" : "bg-transparent")} />
+      </li>
+    )
+  }
+
+  const renderNodeList = (items: MenuNode[], parentId: string | null) => {
+    return (
+      <ul className="space-y-0.5">
+        {items.map((node, position) => (
+          <Fragment key={node.id}>
+            {renderReorderDropZone(parentId, position)}
+            {renderNode(node)}
+          </Fragment>
+        ))}
+        {renderReorderDropZone(parentId, items.length)}
+      </ul>
+    )
+  }
+
   const renderNode = (node: MenuNode) => {
     const hasChildren = Boolean(node.children?.length)
     const isExpanded = expandedNodeIds.has(node.id)
     const isSelected = node.id === selectedNodeId
+    const isDragging = node.id === draggedNodeId
+    const isChildDropTarget = dropTarget?.kind === "child" && dropTarget.nodeId === node.id
 
     return (
       <li key={node.id}>
-        <div className="relative flex items-center gap-2 py-1.5">
+        <div
+          className={cn(
+            "relative flex items-center gap-2 rounded-md py-1.5 transition",
+            isChildDropTarget && "bg-blue-50",
+            isDragging && "opacity-50"
+          )}
+          onDragOver={(event) => setDropAsChild(event, node.id)}
+          onDrop={(event) => handleDropAsChild(event, node.id)}
+        >
           <div className="w-5">
             {hasChildren ? (
               <Button
@@ -49,6 +182,17 @@ export function MenuTree({
               <span className="block h-5 w-5" />
             )}
           </div>
+
+          <button
+            type="button"
+            draggable
+            onDragStart={(event) => handleDragStart(event, node.id)}
+            onDragEnd={handleDragEnd}
+            className="grid h-5 w-5 cursor-grab place-items-center rounded text-slate-400 transition hover:bg-slate-200 hover:text-slate-600"
+            aria-label={`Drag ${node.name}`}
+          >
+            <GripVertical size={13} />
+          </button>
 
           <Button
             type="button"
@@ -101,9 +245,7 @@ export function MenuTree({
 
         {hasChildren && isExpanded ? (
           <div className="ml-2 border-l border-[#bcc8d9] pl-5">
-            <ul className="mt-0.5 space-y-0.5">
-              {node.children?.map((child) => renderNode(child))}
-            </ul>
+            {renderNodeList(node.children ?? [], node.id)}
           </div>
         ) : null}
       </li>
@@ -112,9 +254,10 @@ export function MenuTree({
 
   return (
     <div className="overflow-x-auto rounded-xl pr-2 pb-8">
-        <ul className="min-w-155 space-y-0.5 text-[15px] md:min-w-0">
-        {nodes.map((node) => renderNode(node))}
-      </ul>
+      <div className="mb-3 text-xs text-slate-500">
+        Drag via handle to move as child, or drop on line to reorder within the same level.
+      </div>
+      <div className="min-w-155 text-[15px] md:min-w-0">{renderNodeList(nodes, null)}</div>
     </div>
   )
 }

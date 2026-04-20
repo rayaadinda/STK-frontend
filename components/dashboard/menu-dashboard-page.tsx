@@ -17,6 +17,8 @@ import {
   cloneMenuTree,
   deleteMenuNode,
   findMenuNodeById,
+  moveMenuNodeToParent,
+  reorderMenuNode,
   updateMenuNodeName,
 } from "@/components/dashboard/menu-tree-utils"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
@@ -39,6 +41,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  buildMenuMoveIntent,
+  buildMenuReorderIntent,
+  type MenuMoveIntent,
+  type MenuReorderIntent,
+} from "@/lib/menu-api-contract"
+
+const ALL_ROOT_MENUS_VALUE = "__all__"
+
+function registerTreeMutationIntent(intent: MenuMoveIntent | MenuReorderIntent) {
+  // Placeholder for backend sync layer (PATCH /api/menus/:id/move and /reorder).
+  void intent
+}
 
 function generateMenuId(seed: string): string {
   const slug = seed
@@ -61,7 +76,7 @@ function findFirstNodeId(nodes: typeof menuTree): string {
 }
 
 export function MenuDashboardPage() {
-  const [selectedRootMenu, setSelectedRootMenu] = useState("system management")
+  const [selectedRootMenu, setSelectedRootMenu] = useState(ALL_ROOT_MENUS_VALUE)
   const [treeData, setTreeData] = useState(() => cloneMenuTree(menuTree))
   const [selectedNodeId, setSelectedNodeId] = useState("system-code")
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(
@@ -75,8 +90,40 @@ export function MenuDashboardPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTargetNodeId, setDeleteTargetNodeId] = useState<string | null>(null)
 
-  const nodeMetaMap = useMemo(() => buildNodeMeta(treeData), [treeData])
-  const selectedNodeMeta = nodeMetaMap.get(selectedNodeId)
+  const rootMenuOptions = useMemo(
+    () => treeData.map((rootNode) => ({ id: rootNode.id, name: rootNode.name })),
+    [treeData]
+  )
+
+  const effectiveSelectedRootMenu = useMemo(() => {
+    if (selectedRootMenu === ALL_ROOT_MENUS_VALUE) {
+      return ALL_ROOT_MENUS_VALUE
+    }
+
+    const rootStillExists = rootMenuOptions.some((rootNode) => rootNode.id === selectedRootMenu)
+    return rootStillExists ? selectedRootMenu : ALL_ROOT_MENUS_VALUE
+  }, [rootMenuOptions, selectedRootMenu])
+
+  const visibleTreeData = useMemo(() => {
+    if (effectiveSelectedRootMenu === ALL_ROOT_MENUS_VALUE) {
+      return treeData
+    }
+
+    return treeData.filter((rootNode) => rootNode.id === effectiveSelectedRootMenu)
+  }, [effectiveSelectedRootMenu, treeData])
+
+  const nodeMetaMap = useMemo(() => buildNodeMeta(visibleTreeData), [visibleTreeData])
+  const effectiveSelectedNodeId = useMemo(() => {
+    const visibleNodeIds = new Set(collectNodeIds(visibleTreeData))
+
+    if (!selectedNodeId || !visibleNodeIds.has(selectedNodeId)) {
+      return findFirstNodeId(visibleTreeData)
+    }
+
+    return selectedNodeId
+  }, [selectedNodeId, visibleTreeData])
+
+  const selectedNodeMeta = nodeMetaMap.get(effectiveSelectedNodeId)
 
   const selectedParentName = selectedNodeMeta?.parentId
     ? nodeMetaMap.get(selectedNodeMeta.parentId)?.name ?? "-"
@@ -97,11 +144,11 @@ export function MenuDashboardPage() {
     : "this menu"
 
   const expandAll = () => {
-    setExpandedNodeIds(new Set(collectNodeIds(treeData)))
+    setExpandedNodeIds(new Set(collectNodeIds(visibleTreeData)))
   }
 
   const collapseAll = () => {
-    setExpandedNodeIds(new Set(treeData[0]?.id ? [treeData[0].id] : []))
+    setExpandedNodeIds(new Set(visibleTreeData.map((rootNode) => rootNode.id)))
   }
 
   const toggleNode = (id: string) => {
@@ -194,7 +241,7 @@ export function MenuDashboardPage() {
     setTreeData((previous) => {
       const next = deleteMenuNode(previous, deleteTargetNodeId)
 
-      if (selectedNodeId === deleteTargetNodeId) {
+        if (effectiveSelectedNodeId === deleteTargetNodeId) {
         setSelectedNodeId(findFirstNodeId(next))
       }
 
@@ -208,6 +255,37 @@ export function MenuDashboardPage() {
     })
 
     setDeleteDialogOpen(false)
+  }
+
+  const handleMoveNode = (menuId: string, targetParentId: string | null) => {
+    setTreeData((previous) => moveMenuNodeToParent(previous, menuId, targetParentId))
+
+    if (targetParentId) {
+      setExpandedNodeIds((previous) => {
+        const next = new Set(previous)
+        next.add(targetParentId)
+        return next
+      })
+    }
+
+    registerTreeMutationIntent(
+      buildMenuMoveIntent(menuId, {
+        parentId: targetParentId,
+      })
+    )
+  }
+
+  const handleReorderNode = (menuId: string, targetParentId: string | null, targetPosition: number) => {
+    setTreeData((previous) =>
+      reorderMenuNode(previous, menuId, targetParentId, targetPosition)
+    )
+
+    registerTreeMutationIntent(
+      buildMenuReorderIntent(menuId, {
+        parentId: targetParentId,
+        position: targetPosition,
+      })
+    )
   }
 
   return (
@@ -235,15 +313,20 @@ export function MenuDashboardPage() {
                 Menu
               </Label>
 
-              <Select value={selectedRootMenu} onValueChange={setSelectedRootMenu}>
+                <Select value={effectiveSelectedRootMenu} onValueChange={setSelectedRootMenu}>
                 <SelectTrigger
                   id="menu-selector"
                   className="w-full rounded-xl border-transparent bg-[#e9edf2] px-4 font-medium text-[#1f2937] shadow-none"
                 >
-                  <SelectValue placeholder="system management" />
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="system management">system management</SelectItem>
+                  <SelectItem value={ALL_ROOT_MENUS_VALUE}>All</SelectItem>
+                  {rootMenuOptions.map((rootNode) => (
+                    <SelectItem key={rootNode.id} value={rootNode.id}>
+                      {rootNode.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -275,14 +358,16 @@ export function MenuDashboardPage() {
             </div>
 
             <MenuTree
-              nodes={treeData}
-              selectedNodeId={selectedNodeId}
+              nodes={visibleTreeData}
+              selectedNodeId={effectiveSelectedNodeId}
               expandedNodeIds={expandedNodeIds}
               onSelectNode={setSelectedNodeId}
               onToggleNode={toggleNode}
               onAddChild={openAddChildDialog}
               onEditNode={openEditDialog}
               onDeleteNode={openDeleteDialog}
+              onMoveNode={handleMoveNode}
+              onReorderNode={handleReorderNode}
             />
           </section>
 
