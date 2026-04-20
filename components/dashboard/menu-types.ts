@@ -1,6 +1,8 @@
 export type MenuNode = {
   id: string
   name: string
+  parentId?: string
+  position?: number
   children?: MenuNode[]
 }
 

@@ -1,26 +1,15 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Folder } from "lucide-react"
 import Image from "next/image"
 
-import {
-  buildNodeMeta,
-  collectNodeIds,
-  menuTree,
-} from "@/components/dashboard/menu-mock-data"
+import { buildNodeMeta, collectNodeIds } from "@/components/dashboard/menu-mock-data"
 import { MenuCrudDialog, type CrudDialogMode } from "@/components/dashboard/menu-crud-dialog"
 import { MenuDetailsPanel } from "@/components/dashboard/menu-details-panel"
 import { MenuTree } from "@/components/dashboard/menu-tree"
-import {
-  addMenuNode,
-  cloneMenuTree,
-  deleteMenuNode,
-  findMenuNodeById,
-  moveMenuNodeToParent,
-  reorderMenuNode,
-  updateMenuNodeName,
-} from "@/components/dashboard/menu-tree-utils"
+import { findMenuNodeById } from "@/components/dashboard/menu-tree-utils"
+import type { MenuNode } from "@/components/dashboard/menu-types"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import {
   AlertDialog,
@@ -41,33 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  buildMenuMoveIntent,
-  buildMenuReorderIntent,
-  type MenuMoveIntent,
-  type MenuReorderIntent,
-} from "@/lib/menu-api-contract"
+import { useMenuStore } from "@/stores/menu.store"
 
 const ALL_ROOT_MENUS_VALUE = "__all__"
 
-function registerTreeMutationIntent(intent: MenuMoveIntent | MenuReorderIntent) {
-  // Placeholder for backend sync layer (PATCH /api/menus/:id/move and /reorder).
-  void intent
-}
-
-function generateMenuId(seed: string): string {
-  const slug = seed
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-
-  const fallback = "menu"
-  const unique = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
-  return `${slug || fallback}-${unique}`
-}
-
-function findFirstNodeId(nodes: typeof menuTree): string {
+function findFirstNodeId(nodes: MenuNode[]): string {
   if (!nodes.length) {
     return ""
   }
@@ -76,12 +43,22 @@ function findFirstNodeId(nodes: typeof menuTree): string {
 }
 
 export function MenuDashboardPage() {
+  const treeData = useMenuStore((state) => state.treeData)
+  const isLoading = useMenuStore((state) => state.isLoading)
+  const isMutating = useMenuStore((state) => state.isMutating)
+  const errorMessage = useMenuStore((state) => state.errorMessage)
+
+  const initialize = useMenuStore((state) => state.initialize)
+  const clearError = useMenuStore((state) => state.clearError)
+  const createMenuItem = useMenuStore((state) => state.createMenuItem)
+  const updateMenuItem = useMenuStore((state) => state.updateMenuItem)
+  const deleteMenuItem = useMenuStore((state) => state.deleteMenuItem)
+  const moveMenuItem = useMenuStore((state) => state.moveMenuItem)
+  const reorderMenuItem = useMenuStore((state) => state.reorderMenuItem)
+
   const [selectedRootMenu, setSelectedRootMenu] = useState(ALL_ROOT_MENUS_VALUE)
-  const [treeData, setTreeData] = useState(() => cloneMenuTree(menuTree))
-  const [selectedNodeId, setSelectedNodeId] = useState("system-code")
-  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(
-    () => new Set(collectNodeIds(menuTree))
-  )
+  const [selectedNodeId, setSelectedNodeId] = useState("")
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set())
   const [crudDialogOpen, setCrudDialogOpen] = useState(false)
   const [crudMode, setCrudMode] = useState<CrudDialogMode>("add-root")
   const [crudTargetNodeId, setCrudTargetNodeId] = useState<string | null>(null)
@@ -89,6 +66,20 @@ export function MenuDashboardPage() {
   const [crudParentId, setCrudParentId] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTargetNodeId, setDeleteTargetNodeId] = useState<string | null>(null)
+
+  useEffect(() => {
+    void initialize()
+  }, [initialize])
+
+  const allNodeIds = useMemo(() => collectNodeIds(treeData), [treeData])
+
+  const effectiveExpandedNodeIds = useMemo(() => {
+    if (expandedNodeIds.size === 0) {
+      return new Set(allNodeIds)
+    }
+
+    return new Set(Array.from(expandedNodeIds).filter((id) => allNodeIds.includes(id)))
+  }, [allNodeIds, expandedNodeIds])
 
   const rootMenuOptions = useMemo(
     () => treeData.map((rootNode) => ({ id: rootNode.id, name: rootNode.name })),
@@ -204,33 +195,37 @@ export function MenuDashboardPage() {
       return
     }
 
-    if (crudMode === "edit" && crudTargetNodeId) {
-      setTreeData((previous) => updateMenuNodeName(previous, crudTargetNodeId, nextName))
-      setCrudDialogOpen(false)
-      return
+    const run = async () => {
+      if (crudMode === "edit" && crudTargetNodeId) {
+        const updatedId = await updateMenuItem(crudTargetNodeId, { name: nextName })
+        if (updatedId) {
+          setSelectedNodeId(updatedId)
+          setCrudDialogOpen(false)
+        }
+        return
+      }
+
+      const parentId = crudMode === "add-child" ? crudTargetNodeId : crudParentId
+      const createdId = await createMenuItem({
+        name: nextName,
+        parentId,
+      })
+
+      if (parentId) {
+        setExpandedNodeIds((previous) => {
+          const next = new Set(previous)
+          next.add(parentId)
+          return next
+        })
+      }
+
+      if (createdId) {
+        setSelectedNodeId(createdId)
+        setCrudDialogOpen(false)
+      }
     }
 
-    const parentId = crudMode === "add-child" ? crudTargetNodeId : crudParentId
-    const nextNodeId = generateMenuId(nextName)
-
-    setTreeData((previous) =>
-      addMenuNode(previous, parentId, {
-        id: nextNodeId,
-        name: nextName,
-      })
-    )
-
-    setExpandedNodeIds((previous) => {
-      const next = new Set(previous)
-      if (parentId) {
-        next.add(parentId)
-      }
-      next.add(nextNodeId)
-      return next
-    })
-
-    setSelectedNodeId(nextNodeId)
-    setCrudDialogOpen(false)
+    void run()
   }
 
   const handleConfirmDelete = () => {
@@ -238,54 +233,55 @@ export function MenuDashboardPage() {
       return
     }
 
-    setTreeData((previous) => {
-      const next = deleteMenuNode(previous, deleteTargetNodeId)
+    const targetId = deleteTargetNodeId
 
-        if (effectiveSelectedNodeId === deleteTargetNodeId) {
-        setSelectedNodeId(findFirstNodeId(next))
+    const run = async () => {
+      const deletedId = await deleteMenuItem(targetId)
+      if (deletedId && deletedId === effectiveSelectedNodeId) {
+        setSelectedNodeId("")
       }
 
-      return next
-    })
+      if (deletedId) {
+        setDeleteDialogOpen(false)
+      }
+    }
 
-    setExpandedNodeIds((previous) => {
-      const next = new Set(previous)
-      next.delete(deleteTargetNodeId)
-      return next
-    })
-
-    setDeleteDialogOpen(false)
+    void run()
   }
 
   const handleMoveNode = (menuId: string, targetParentId: string | null) => {
-    setTreeData((previous) => moveMenuNodeToParent(previous, menuId, targetParentId))
+    const run = async () => {
+      const movedId = await moveMenuItem(menuId, { parentId: targetParentId })
 
-    if (targetParentId) {
-      setExpandedNodeIds((previous) => {
-        const next = new Set(previous)
-        next.add(targetParentId)
-        return next
-      })
+      if (targetParentId) {
+        setExpandedNodeIds((previous) => {
+          const next = new Set(previous)
+          next.add(targetParentId)
+          return next
+        })
+      }
+
+      if (movedId) {
+        setSelectedNodeId(movedId)
+      }
     }
 
-    registerTreeMutationIntent(
-      buildMenuMoveIntent(menuId, {
-        parentId: targetParentId,
-      })
-    )
+    void run()
   }
 
   const handleReorderNode = (menuId: string, targetParentId: string | null, targetPosition: number) => {
-    setTreeData((previous) =>
-      reorderMenuNode(previous, menuId, targetParentId, targetPosition)
-    )
-
-    registerTreeMutationIntent(
-      buildMenuReorderIntent(menuId, {
+    const run = async () => {
+      const reorderedId = await reorderMenuItem(menuId, {
         parentId: targetParentId,
         position: targetPosition,
       })
-    )
+
+      if (reorderedId) {
+        setSelectedNodeId(reorderedId)
+      }
+    }
+
+    void run()
   }
 
   return (
@@ -313,7 +309,7 @@ export function MenuDashboardPage() {
                 Menu
               </Label>
 
-                <Select value={effectiveSelectedRootMenu} onValueChange={setSelectedRootMenu}>
+              <Select value={effectiveSelectedRootMenu} onValueChange={setSelectedRootMenu}>
                 <SelectTrigger
                   id="menu-selector"
                   className="w-full rounded-xl border-transparent bg-[#e9edf2] px-4 font-medium text-[#1f2937] shadow-none"
@@ -336,6 +332,7 @@ export function MenuDashboardPage() {
                 type="button"
                 variant="outline"
                 onClick={openAddRootDialog}
+                disabled={isMutating || isLoading}
                 className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#0f57b8] hover:bg-blue-50"
               >
                 Add Root
@@ -343,7 +340,8 @@ export function MenuDashboardPage() {
               <Button
                 type="button"
                 onClick={expandAll}
-                  className="h-11 min-w-32 rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white hover:bg-[#162338]"
+                disabled={isMutating || isLoading}
+                className="h-11 min-w-32 rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white hover:bg-[#162338]"
               >
                 Expand All
               </Button>
@@ -351,24 +349,42 @@ export function MenuDashboardPage() {
                 type="button"
                 variant="outline"
                 onClick={collapseAll}
-                  className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#667085] hover:bg-slate-50"
+                disabled={isMutating || isLoading}
+                className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#667085] hover:bg-slate-50"
               >
                 Collapse All
               </Button>
             </div>
 
-            <MenuTree
-              nodes={visibleTreeData}
-              selectedNodeId={effectiveSelectedNodeId}
-              expandedNodeIds={expandedNodeIds}
-              onSelectNode={setSelectedNodeId}
-              onToggleNode={toggleNode}
-              onAddChild={openAddChildDialog}
-              onEditNode={openEditDialog}
-              onDeleteNode={openDeleteDialog}
-              onMoveNode={handleMoveNode}
-              onReorderNode={handleReorderNode}
-            />
+            {errorMessage ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span>{errorMessage}</span>
+                  <Button type="button" variant="outline" size="xs" onClick={clearError}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {isLoading ? (
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
+                Loading menus from backend...
+              </div>
+            ) : (
+              <MenuTree
+                nodes={visibleTreeData}
+                selectedNodeId={effectiveSelectedNodeId}
+                expandedNodeIds={effectiveExpandedNodeIds}
+                onSelectNode={setSelectedNodeId}
+                onToggleNode={toggleNode}
+                onAddChild={openAddChildDialog}
+                onEditNode={openEditDialog}
+                onDeleteNode={openDeleteDialog}
+                onMoveNode={handleMoveNode}
+                onReorderNode={handleReorderNode}
+              />
+            )}
           </section>
 
           <MenuDetailsPanel
