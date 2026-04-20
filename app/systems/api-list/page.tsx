@@ -1,5 +1,5 @@
-import { ModulePlaceholderPage } from "@/components/dashboard/module-placeholder-page"
+import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
 
 export default function ApiListPage() {
-  return <ModulePlaceholderPage title="API List" />
+  return <MenuDashboardPage title="API List" scopeKey="systems/api-list" />
 }

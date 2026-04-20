@@ -1,5 +1,5 @@
-import { ModulePlaceholderPage } from "@/components/dashboard/module-placeholder-page"
+import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
 
 export default function CompetitionDetailPage() {
-  return <ModulePlaceholderPage title="Competition Detail" />
+  return <MenuDashboardPage title="Competition Detail" scopeKey="competition/detail" />
 }

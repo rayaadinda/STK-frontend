@@ -1,5 +1,5 @@
-import { ModulePlaceholderPage } from "@/components/dashboard/module-placeholder-page"
+import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
 
 export default function PropertiesPage() {
-  return <ModulePlaceholderPage title="Properties" />
+  return <MenuDashboardPage title="Properties" scopeKey="systems/properties" />
 }

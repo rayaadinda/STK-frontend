@@ -12,17 +12,23 @@ import {
 
 type MenuStoreState = {
   treeData: MenuNode[]
+  activeScope: string | null
   isLoading: boolean
   isMutating: boolean
   errorMessage: string | null
-  initialize: () => Promise<void>
-  refresh: (options?: { showLoading?: boolean }) => Promise<void>
+  initialize: (scope: string) => Promise<void>
+  refresh: (scope: string, options?: { showLoading?: boolean }) => Promise<void>
   clearError: () => void
-  createMenuItem: (input: { name: string; parentId: string | null }) => Promise<string | null>
-  updateMenuItem: (id: string, input: { name: string }) => Promise<string | null>
-  deleteMenuItem: (id: string) => Promise<string | null>
-  moveMenuItem: (id: string, input: { parentId: string | null }) => Promise<string | null>
+  createMenuItem: (scope: string, input: { name: string; parentId: string | null }) => Promise<string | null>
+  updateMenuItem: (scope: string, id: string, input: { name: string }) => Promise<string | null>
+  deleteMenuItem: (scope: string, id: string) => Promise<string | null>
+  moveMenuItem: (
+    scope: string,
+    id: string,
+    input: { parentId: string | null }
+  ) => Promise<string | null>
   reorderMenuItem: (
+    scope: string,
     id: string,
     input: { parentId: string | null; position: number }
   ) => Promise<string | null>
@@ -37,24 +43,32 @@ function toErrorMessage(error: unknown, fallback: string): string {
 
 export const useMenuStore = create<MenuStoreState>((set, get) => ({
   treeData: [],
+  activeScope: null,
   isLoading: true,
   isMutating: false,
   errorMessage: null,
 
-  initialize: async () => {
-    await get().refresh({ showLoading: true })
+  initialize: async (scope) => {
+    set({ activeScope: scope })
+    await get().refresh(scope, { showLoading: true })
   },
 
-  refresh: async (options) => {
+  refresh: async (scope, options) => {
     if (options?.showLoading) {
       set({ isLoading: true })
     }
 
     try {
-      const menus = await listMenus()
-      set({ treeData: menus, errorMessage: null })
+      const menus = await listMenus(scope)
+      set((state) =>
+        state.activeScope === scope ? { treeData: menus, errorMessage: null } : state
+      )
     } catch (error) {
-      set({ errorMessage: toErrorMessage(error, "Failed to load menus from backend.") })
+      set((state) =>
+        state.activeScope === scope
+          ? { errorMessage: toErrorMessage(error, "Failed to load menus from backend.") }
+          : state
+      )
     } finally {
       if (options?.showLoading) {
         set({ isLoading: false })
@@ -66,11 +80,11 @@ export const useMenuStore = create<MenuStoreState>((set, get) => ({
     set({ errorMessage: null })
   },
 
-  createMenuItem: async (input) => {
+  createMenuItem: async (scope, input) => {
     set({ isMutating: true })
     try {
-      const created = await createMenu(input)
-      await get().refresh()
+      const created = await createMenu({ scope, ...input })
+      await get().refresh(scope)
       return created.id
     } catch (error) {
       set({ errorMessage: toErrorMessage(error, "Failed to create menu.") })
@@ -80,11 +94,11 @@ export const useMenuStore = create<MenuStoreState>((set, get) => ({
     }
   },
 
-  updateMenuItem: async (id, input) => {
+  updateMenuItem: async (scope, id, input) => {
     set({ isMutating: true })
     try {
-      const updated = await updateMenu(id, input)
-      await get().refresh()
+      const updated = await updateMenu(id, { scope, ...input })
+      await get().refresh(scope)
       return updated.id
     } catch (error) {
       set({ errorMessage: toErrorMessage(error, "Failed to update menu.") })
@@ -94,11 +108,11 @@ export const useMenuStore = create<MenuStoreState>((set, get) => ({
     }
   },
 
-  deleteMenuItem: async (id) => {
+  deleteMenuItem: async (scope, id) => {
     set({ isMutating: true })
     try {
-      const deleted = await deleteMenu(id)
-      await get().refresh()
+      const deleted = await deleteMenu(id, scope)
+      await get().refresh(scope)
       return deleted.id
     } catch (error) {
       set({ errorMessage: toErrorMessage(error, "Failed to delete menu.") })
@@ -108,11 +122,11 @@ export const useMenuStore = create<MenuStoreState>((set, get) => ({
     }
   },
 
-  moveMenuItem: async (id, input) => {
+  moveMenuItem: async (scope, id, input) => {
     set({ isMutating: true })
     try {
-      const moved = await moveMenu(id, input)
-      await get().refresh()
+      const moved = await moveMenu(id, { scope, ...input })
+      await get().refresh(scope)
       return moved.id
     } catch (error) {
       set({ errorMessage: toErrorMessage(error, "Failed to move menu.") })
@@ -122,11 +136,11 @@ export const useMenuStore = create<MenuStoreState>((set, get) => ({
     }
   },
 
-  reorderMenuItem: async (id, input) => {
+  reorderMenuItem: async (scope, id, input) => {
     set({ isMutating: true })
     try {
-      const reordered = await reorderMenu(id, input)
-      await get().refresh()
+      const reordered = await reorderMenu(id, { scope, ...input })
+      await get().refresh(scope)
       return reordered.id
     } catch (error) {
       set({ errorMessage: toErrorMessage(error, "Failed to reorder menu.") })

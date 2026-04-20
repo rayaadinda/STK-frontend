@@ -2,15 +2,12 @@ import { Folder, Grid2x2 } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { fetchBackendHealthSummary } from "@/lib/backend-health"
 
 type ModulePlaceholderPageProps = {
   title: string
 }
 
-export async function ModulePlaceholderPage({ title }: ModulePlaceholderPageProps) {
-  const { checkedAt, message, status } = await fetchBackendHealthSummary()
-
+export function ModulePlaceholderPage({ title }: ModulePlaceholderPageProps) {
   return (
     <DashboardShell>
       <div className="w-full max-w-none">
@@ -31,22 +28,19 @@ export async function ModulePlaceholderPage({ title }: ModulePlaceholderPageProp
 
         <Card className="max-w-3xl rounded-2xl border-slate-200 bg-white/80 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl text-slate-800">Module Placeholder</CardTitle>
+            <CardTitle className="text-xl text-slate-800">Module In Progress</CardTitle>
             <CardDescription>
-              This page is intentionally empty and prepared for backend integration.
+              This page is intentionally kept minimal while this module API is not implemented yet.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-              <p className="font-medium text-slate-700">Backend Status: {status.toUpperCase()}</p>
-              <p className="mt-1">{message}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {checkedAt ? `Last checked at ${new Date(checkedAt).toLocaleString()}` : "Not checked yet."}
-              </p>
+              <p className="font-medium text-slate-700">No backend health placeholder is shown here anymore.</p>
+              <p className="mt-1">Route and layout are ready for real module content.</p>
             </div>
 
             <p className="text-sm text-slate-500">
-              Refresh this page to recheck backend connectivity.
+              Continue implementation by adding service calls and dedicated UI for this module.
             </p>
           </CardContent>
         </Card>

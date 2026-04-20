@@ -1,5 +1,5 @@
 import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
 
 export default function SystemsMenusPage() {
-  return <MenuDashboardPage />
+  return <MenuDashboardPage title="Menus" scopeKey="systems/menus" />
 }

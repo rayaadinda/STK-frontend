@@ -253,7 +253,7 @@ export function MenuTree({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl pr-2 pb-8">
+    <div className="overflow-x-auto pr-2 pb-8">
       <div className="mb-3 text-xs text-slate-500">
         Drag via handle to move as child, or drop on line to reorder within the same level.
       </div>

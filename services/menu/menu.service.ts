@@ -18,16 +18,22 @@ function mapNode(node: MenuNode): MenuNode {
   }
 }
 
-export async function listMenus(): Promise<MenuNode[]> {
-  const data = await apiRequest<MenuNode[]>("/api/menus", { method: "GET" })
+function withScope(path: string, scope: string): string {
+  const params = new URLSearchParams({ scope })
+  return `${path}?${params.toString()}`
+}
+
+export async function listMenus(scope: string): Promise<MenuNode[]> {
+  const data = await apiRequest<MenuNode[]>(withScope("/api/menus", scope), { method: "GET" })
   return data.map(mapNode)
 }
 
 export async function createMenu(input: {
+  scope: string
   name: string
   parentId: string | null
 }): Promise<MenuItemDTO> {
-  return apiRequest<MenuItemDTO>("/api/menus", {
+  return apiRequest<MenuItemDTO>(withScope("/api/menus", input.scope), {
     method: "POST",
     body: JSON.stringify({
       name: input.name,
@@ -36,8 +42,11 @@ export async function createMenu(input: {
   })
 }
 
-export async function updateMenu(id: string, input: { name: string }): Promise<MenuItemDTO> {
-  return apiRequest<MenuItemDTO>(`/api/menus/${id}`, {
+export async function updateMenu(
+  id: string,
+  input: { scope: string; name: string }
+): Promise<MenuItemDTO> {
+  return apiRequest<MenuItemDTO>(withScope(`/api/menus/${id}`, input.scope), {
     method: "PUT",
     body: JSON.stringify({
       name: input.name,
@@ -45,8 +54,8 @@ export async function updateMenu(id: string, input: { name: string }): Promise<M
   })
 }
 
-export async function deleteMenu(id: string): Promise<{ id: string }> {
-  return apiRequest<{ id: string }>(`/api/menus/${id}`, {
+export async function deleteMenu(id: string, scope: string): Promise<{ id: string }> {
+  return apiRequest<{ id: string }>(withScope(`/api/menus/${id}`, scope), {
     method: "DELETE",
   })
 }
@@ -54,10 +63,11 @@ export async function deleteMenu(id: string): Promise<{ id: string }> {
 export async function moveMenu(
   id: string,
   input: {
+    scope: string
     parentId: string | null
   }
 ): Promise<MenuItemDTO> {
-  return apiRequest<MenuItemDTO>(`/api/menus/${id}/move`, {
+  return apiRequest<MenuItemDTO>(withScope(`/api/menus/${id}/move`, input.scope), {
     method: "PATCH",
     body: JSON.stringify({
       parentId: input.parentId,
@@ -68,11 +78,12 @@ export async function moveMenu(
 export async function reorderMenu(
   id: string,
   input: {
+    scope: string
     parentId: string | null
     position: number
   }
 ): Promise<MenuItemDTO> {
-  return apiRequest<MenuItemDTO>(`/api/menus/${id}/reorder`, {
+  return apiRequest<MenuItemDTO>(withScope(`/api/menus/${id}/reorder`, input.scope), {
     method: "PATCH",
     body: JSON.stringify({
       parentId: input.parentId,

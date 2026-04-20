@@ -34,6 +34,11 @@ import { useMenuStore } from "@/stores/menu.store"
 
 const ALL_ROOT_MENUS_VALUE = "__all__"
 
+type MenuDashboardPageProps = {
+  title: string
+  scopeKey: string
+}
+
 function findFirstNodeId(nodes: MenuNode[]): string {
   if (!nodes.length) {
     return ""
@@ -42,7 +47,7 @@ function findFirstNodeId(nodes: MenuNode[]): string {
   return nodes[0].id
 }
 
-export function MenuDashboardPage() {
+export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
   const treeData = useMenuStore((state) => state.treeData)
   const isLoading = useMenuStore((state) => state.isLoading)
   const isMutating = useMenuStore((state) => state.isMutating)
@@ -68,8 +73,8 @@ export function MenuDashboardPage() {
   const [deleteTargetNodeId, setDeleteTargetNodeId] = useState<string | null>(null)
 
   useEffect(() => {
-    void initialize()
-  }, [initialize])
+    void initialize(scopeKey)
+  }, [initialize, scopeKey])
 
   const allNodeIds = useMemo(() => collectNodeIds(treeData), [treeData])
 
@@ -197,7 +202,7 @@ export function MenuDashboardPage() {
 
     const run = async () => {
       if (crudMode === "edit" && crudTargetNodeId) {
-        const updatedId = await updateMenuItem(crudTargetNodeId, { name: nextName })
+        const updatedId = await updateMenuItem(scopeKey, crudTargetNodeId, { name: nextName })
         if (updatedId) {
           setSelectedNodeId(updatedId)
           setCrudDialogOpen(false)
@@ -206,7 +211,7 @@ export function MenuDashboardPage() {
       }
 
       const parentId = crudMode === "add-child" ? crudTargetNodeId : crudParentId
-      const createdId = await createMenuItem({
+      const createdId = await createMenuItem(scopeKey, {
         name: nextName,
         parentId,
       })
@@ -236,7 +241,7 @@ export function MenuDashboardPage() {
     const targetId = deleteTargetNodeId
 
     const run = async () => {
-      const deletedId = await deleteMenuItem(targetId)
+      const deletedId = await deleteMenuItem(scopeKey, targetId)
       if (deletedId && deletedId === effectiveSelectedNodeId) {
         setSelectedNodeId("")
       }
@@ -251,7 +256,7 @@ export function MenuDashboardPage() {
 
   const handleMoveNode = (menuId: string, targetParentId: string | null) => {
     const run = async () => {
-      const movedId = await moveMenuItem(menuId, { parentId: targetParentId })
+      const movedId = await moveMenuItem(scopeKey, menuId, { parentId: targetParentId })
 
       if (targetParentId) {
         setExpandedNodeIds((previous) => {
@@ -271,7 +276,7 @@ export function MenuDashboardPage() {
 
   const handleReorderNode = (menuId: string, targetParentId: string | null, targetPosition: number) => {
     const run = async () => {
-      const reorderedId = await reorderMenuItem(menuId, {
+      const reorderedId = await reorderMenuItem(scopeKey, menuId, {
         parentId: targetParentId,
         position: targetPosition,
       })
@@ -290,7 +295,7 @@ export function MenuDashboardPage() {
         <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
           <Folder size={16} className="text-slate-400" />
           <span>/</span>
-          <span className="text-slate-700">Menus</span>
+          <span className="text-slate-700">{title}</span>
         </div>
 
         <div className="mb-6 flex items-center gap-3">
@@ -298,7 +303,7 @@ export function MenuDashboardPage() {
             <Image src="/submenu.png" alt="Logo" width={24} height={32} />
           </span>
           <h1 className="text-[42px] font-semibold leading-none tracking-[-0.02em] text-[#1e293b]">
-            Menus
+            {title}
           </h1>
         </div>
 
@@ -369,7 +374,7 @@ export function MenuDashboardPage() {
 
             {isLoading ? (
               <div className="rounded-lg border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
-                Loading menus from backend...
+                Loading {title.toLowerCase()} from backend...
               </div>
             ) : (
               <MenuTree
@@ -388,7 +393,7 @@ export function MenuDashboardPage() {
           </section>
 
           <MenuDetailsPanel
-            id="56320ee9-6af6-11ed-a7ba-f220afe5e4a9"
+            id={selectedNodeMeta?.id ?? "-"}
             depth={selectedNodeMeta?.depth ?? 0}
             parentName={selectedParentName}
             name={selectedNodeMeta?.name ?? "-"}
@@ -414,7 +419,7 @@ export function MenuDashboardPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Menu</AlertDialogTitle>
             <AlertDialogDescription>
-              Delete &quot;{deleteTargetName}&quot; and all of its children from current mock tree?
+              Delete &quot;{deleteTargetName}&quot; and all of its children from current module tree?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

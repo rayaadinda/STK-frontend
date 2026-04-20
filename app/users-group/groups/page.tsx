@@ -1,5 +1,5 @@
-import { ModulePlaceholderPage } from "@/components/dashboard/module-placeholder-page"
+import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
 
 export default function GroupsPage() {
-  return <ModulePlaceholderPage title="Groups" />
+  return <MenuDashboardPage title="Groups" scopeKey="users-group/groups" />
 }

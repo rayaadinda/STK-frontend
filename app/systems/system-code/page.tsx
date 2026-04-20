@@ -1,5 +1,5 @@
-import { ModulePlaceholderPage } from "@/components/dashboard/module-placeholder-page"
+import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
 
 export default function SystemCodePage() {
-  return <ModulePlaceholderPage title="System Code" />
+  return <MenuDashboardPage title="System Code" scopeKey="systems/system-code" />
 }
