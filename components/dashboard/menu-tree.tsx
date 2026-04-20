@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, Plus } from "lucide-react"
 
 import type { MenuNode } from "@/components/dashboard/menu-types"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 type MenuTreeProps = {
@@ -28,24 +29,28 @@ export function MenuTree({
         <div className="relative flex items-center gap-2 py-1.5">
           <div className="w-5">
             {hasChildren ? (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => onToggleNode(node.id)}
-                className="grid h-5 w-5 place-items-center rounded text-slate-600 transition hover:bg-slate-200"
+                className="h-5 w-5 rounded text-slate-600 transition hover:bg-slate-200"
                 aria-label={`Toggle ${node.name}`}
               >
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
+              </Button>
             ) : (
               <span className="block h-5 w-5" />
             )}
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => onSelectNode(node.id)}
             className={cn(
-              "relative flex items-center gap-2 rounded-md px-1 py-0.5 text-left text-[15px] text-slate-700 transition",
+              "relative h-auto justify-start gap-2 rounded-md px-1 py-0.5 text-left text-[15px] text-slate-700 transition hover:bg-transparent",
               isSelected && "font-semibold text-slate-900"
             )}
           >
@@ -55,7 +60,7 @@ export function MenuTree({
                 <Plus size={14} />
               </span>
             ) : null}
-          </button>
+          </Button>
         </div>
 
         {hasChildren && isExpanded ? (
@@ -71,7 +76,7 @@ export function MenuTree({
 
   return (
     <div className="overflow-x-auto rounded-xl pr-2 pb-8">
-      <ul className="min-w-[620px] space-y-0.5 text-[15px] md:min-w-0">
+        <ul className="min-w-155 space-y-0.5 text-[15px] md:min-w-0">
         {nodes.map((node) => renderNode(node))}
       </ul>
     </div>

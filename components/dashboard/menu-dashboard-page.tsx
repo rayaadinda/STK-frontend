@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { ChevronDown, Folder, Grid2x2 } from "lucide-react"
+import { Folder } from "lucide-react"
+import Image from "next/image"
 
 import {
   buildNodeMeta,
@@ -11,6 +12,15 @@ import {
 import { MenuDetailsPanel } from "@/components/dashboard/menu-details-panel"
 import { MenuTree } from "@/components/dashboard/menu-tree"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export function MenuDashboardPage() {
   const [selectedRootMenu, setSelectedRootMenu] = useState("system management")
@@ -48,7 +58,7 @@ export function MenuDashboardPage() {
 
   return (
     <DashboardShell>
-      <div className="mx-auto w-full max-w-[1400px]">
+      <div className="w-full max-w-none">
         <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
           <Folder size={16} className="text-slate-400" />
           <span>/</span>
@@ -57,7 +67,7 @@ export function MenuDashboardPage() {
 
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0f57b8] text-white">
-            <Grid2x2 size={17} />
+            <Image src="/submenu.png" alt="Logo" width={24} height={32} />
           </span>
           <h1 className="text-[42px] font-semibold leading-none tracking-[-0.02em] text-[#1e293b]">
             Menus
@@ -66,37 +76,40 @@ export function MenuDashboardPage() {
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section>
-            <label htmlFor="menu-selector" className="mb-2.5 block text-sm text-slate-500">
-              Menu
-            </label>
+            <div className="mb-6 w-full max-w-105">
+              <Label htmlFor="menu-selector" className="mb-2.5 block text-sm font-medium text-slate-500">
+                Menu
+              </Label>
 
-            <div className="relative mb-6 w-full max-w-[420px]">
-              <select
-                id="menu-selector"
-                value={selectedRootMenu}
-                onChange={(event) => setSelectedRootMenu(event.target.value)}
-                className="h-12 w-full appearance-none rounded-xl border border-transparent bg-[#e9edf2] px-4 pr-10 text-[28px] font-medium leading-none text-[#1f2937] outline-none"
-              >
-                <option value="system management">system management</option>
-              </select>
-              <ChevronDown size={20} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Select value={selectedRootMenu} onValueChange={setSelectedRootMenu}>
+                <SelectTrigger
+                  id="menu-selector"
+                  className="h-24 w-full rounded-xl border-transparent bg-[#e9edf2] px-4 text-xl font-medium text-[#1f2937] shadow-none"
+                >
+                  <SelectValue placeholder="system management" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="system management">system management</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="mb-4 flex flex-wrap gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={expandAll}
-                className="h-11 min-w-[128px] rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white"
+                  className="h-11 min-w-32 rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white hover:bg-[#162338]"
               >
                 Expand All
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={collapseAll}
-                className="h-11 min-w-[128px] rounded-full border border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#667085]"
+                  className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#667085] hover:bg-slate-50"
               >
                 Collapse All
-              </button>
+              </Button>
             </div>
 
             <MenuTree
