@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus } from "lucide-react"
+import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
 
 import type { MenuNode } from "@/components/dashboard/menu-types"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,9 @@ type MenuTreeProps = {
   expandedNodeIds: Set<string>
   onSelectNode: (id: string) => void
   onToggleNode: (id: string) => void
+  onAddChild: (id: string) => void
+  onEditNode: (id: string) => void
+  onDeleteNode: (id: string) => void
 }
 
 export function MenuTree({
@@ -18,6 +21,9 @@ export function MenuTree({
   expandedNodeIds,
   onSelectNode,
   onToggleNode,
+  onAddChild,
+  onEditNode,
+  onDeleteNode,
 }: MenuTreeProps) {
   const renderNode = (node: MenuNode) => {
     const hasChildren = Boolean(node.children?.length)
@@ -55,12 +61,42 @@ export function MenuTree({
             )}
           >
             <span>{node.name}</span>
-            {node.id === "system-code" ? (
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#0b5ec8] text-white">
-                <Plus size={14} />
-              </span>
-            ) : null}
           </Button>
+
+          {isSelected ? (
+            <div className="ml-1 flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onAddChild(node.id)}
+                className="h-6 w-6 rounded-full bg-[#0b5ec8] text-white hover:bg-[#0a53af]"
+                aria-label={`Add child to ${node.name}`}
+              >
+                <Plus size={13} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onEditNode(node.id)}
+                className="h-6 w-6 rounded-full text-slate-500 hover:bg-slate-200"
+                aria-label={`Edit ${node.name}`}
+              >
+                <Pencil size={13} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => onDeleteNode(node.id)}
+                className="h-6 w-6 rounded-full text-red-600 hover:bg-red-50"
+                aria-label={`Delete ${node.name}`}
+              >
+                <Trash2 size={13} />
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         {hasChildren && isExpanded ? (

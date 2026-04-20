@@ -9,9 +9,27 @@ import {
   collectNodeIds,
   menuTree,
 } from "@/components/dashboard/menu-mock-data"
+import { MenuCrudDialog, type CrudDialogMode } from "@/components/dashboard/menu-crud-dialog"
 import { MenuDetailsPanel } from "@/components/dashboard/menu-details-panel"
 import { MenuTree } from "@/components/dashboard/menu-tree"
+import {
+  addMenuNode,
+  cloneMenuTree,
+  deleteMenuNode,
+  findMenuNodeById,
+  updateMenuNodeName,
+} from "@/components/dashboard/menu-tree-utils"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
@@ -22,26 +40,68 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+function generateMenuId(seed: string): string {
+  const slug = seed
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+
+  const fallback = "menu"
+  const unique = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+  return `${slug || fallback}-${unique}`
+}
+
+function findFirstNodeId(nodes: typeof menuTree): string {
+  if (!nodes.length) {
+    return ""
+  }
+
+  return nodes[0].id
+}
+
 export function MenuDashboardPage() {
   const [selectedRootMenu, setSelectedRootMenu] = useState("system management")
+  const [treeData, setTreeData] = useState(() => cloneMenuTree(menuTree))
   const [selectedNodeId, setSelectedNodeId] = useState("system-code")
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(
     () => new Set(collectNodeIds(menuTree))
   )
+  const [crudDialogOpen, setCrudDialogOpen] = useState(false)
+  const [crudMode, setCrudMode] = useState<CrudDialogMode>("add-root")
+  const [crudTargetNodeId, setCrudTargetNodeId] = useState<string | null>(null)
+  const [crudName, setCrudName] = useState("")
+  const [crudParentId, setCrudParentId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTargetNodeId, setDeleteTargetNodeId] = useState<string | null>(null)
 
-  const nodeMetaMap = useMemo(() => buildNodeMeta(menuTree), [])
+  const nodeMetaMap = useMemo(() => buildNodeMeta(treeData), [treeData])
   const selectedNodeMeta = nodeMetaMap.get(selectedNodeId)
 
   const selectedParentName = selectedNodeMeta?.parentId
     ? nodeMetaMap.get(selectedNodeMeta.parentId)?.name ?? "-"
     : "-"
 
+  const parentOptions = useMemo(() => {
+    return Array.from(nodeMetaMap.values())
+      .filter((item) => item.id !== crudTargetNodeId)
+      .map((item) => ({ id: item.id, name: item.name }))
+  }, [nodeMetaMap, crudTargetNodeId])
+
+  const crudParentDisplayName = crudParentId
+    ? nodeMetaMap.get(crudParentId)?.name ?? "-"
+    : "-"
+
+  const deleteTargetName = deleteTargetNodeId
+    ? findMenuNodeById(treeData, deleteTargetNodeId)?.name ?? "this menu"
+    : "this menu"
+
   const expandAll = () => {
-    setExpandedNodeIds(new Set(collectNodeIds(menuTree)))
+    setExpandedNodeIds(new Set(collectNodeIds(treeData)))
   }
 
   const collapseAll = () => {
-    setExpandedNodeIds(new Set([menuTree[0]?.id]))
+    setExpandedNodeIds(new Set(treeData[0]?.id ? [treeData[0].id] : []))
   }
 
   const toggleNode = (id: string) => {
@@ -54,6 +114,100 @@ export function MenuDashboardPage() {
       }
       return next
     })
+  }
+
+  const openAddRootDialog = () => {
+    setCrudMode("add-root")
+    setCrudTargetNodeId(null)
+    setCrudName("")
+    setCrudParentId(null)
+    setCrudDialogOpen(true)
+  }
+
+  const openAddChildDialog = (nodeId: string) => {
+    setCrudMode("add-child")
+    setCrudTargetNodeId(nodeId)
+    setCrudName("")
+    setCrudParentId(nodeId)
+    setCrudDialogOpen(true)
+  }
+
+  const openEditDialog = (nodeId: string) => {
+    const target = findMenuNodeById(treeData, nodeId)
+    if (!target) {
+      return
+    }
+
+    setCrudMode("edit")
+    setCrudTargetNodeId(nodeId)
+    setCrudName(target.name)
+    setCrudParentId(nodeMetaMap.get(nodeId)?.parentId ?? null)
+    setCrudDialogOpen(true)
+  }
+
+  const openDeleteDialog = (nodeId: string) => {
+    setDeleteTargetNodeId(nodeId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleSaveCrud = () => {
+    const nextName = crudName.trim()
+
+    if (!nextName) {
+      return
+    }
+
+    if (crudMode === "edit" && crudTargetNodeId) {
+      setTreeData((previous) => updateMenuNodeName(previous, crudTargetNodeId, nextName))
+      setCrudDialogOpen(false)
+      return
+    }
+
+    const parentId = crudMode === "add-child" ? crudTargetNodeId : crudParentId
+    const nextNodeId = generateMenuId(nextName)
+
+    setTreeData((previous) =>
+      addMenuNode(previous, parentId, {
+        id: nextNodeId,
+        name: nextName,
+      })
+    )
+
+    setExpandedNodeIds((previous) => {
+      const next = new Set(previous)
+      if (parentId) {
+        next.add(parentId)
+      }
+      next.add(nextNodeId)
+      return next
+    })
+
+    setSelectedNodeId(nextNodeId)
+    setCrudDialogOpen(false)
+  }
+
+  const handleConfirmDelete = () => {
+    if (!deleteTargetNodeId) {
+      return
+    }
+
+    setTreeData((previous) => {
+      const next = deleteMenuNode(previous, deleteTargetNodeId)
+
+      if (selectedNodeId === deleteTargetNodeId) {
+        setSelectedNodeId(findFirstNodeId(next))
+      }
+
+      return next
+    })
+
+    setExpandedNodeIds((previous) => {
+      const next = new Set(previous)
+      next.delete(deleteTargetNodeId)
+      return next
+    })
+
+    setDeleteDialogOpen(false)
   }
 
   return (
@@ -97,6 +251,14 @@ export function MenuDashboardPage() {
             <div className="mb-4 flex flex-wrap gap-3">
               <Button
                 type="button"
+                variant="outline"
+                onClick={openAddRootDialog}
+                className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#0f57b8] hover:bg-blue-50"
+              >
+                Add Root
+              </Button>
+              <Button
+                type="button"
                 onClick={expandAll}
                   className="h-11 min-w-32 rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white hover:bg-[#162338]"
               >
@@ -113,11 +275,14 @@ export function MenuDashboardPage() {
             </div>
 
             <MenuTree
-              nodes={menuTree}
+              nodes={treeData}
               selectedNodeId={selectedNodeId}
               expandedNodeIds={expandedNodeIds}
               onSelectNode={setSelectedNodeId}
               onToggleNode={toggleNode}
+              onAddChild={openAddChildDialog}
+              onEditNode={openEditDialog}
+              onDeleteNode={openDeleteDialog}
             />
           </section>
 
@@ -129,6 +294,39 @@ export function MenuDashboardPage() {
           />
         </div>
       </div>
+
+      <MenuCrudDialog
+        mode={crudMode}
+        open={crudDialogOpen}
+        onOpenChange={setCrudDialogOpen}
+        name={crudName}
+        onNameChange={setCrudName}
+        parentId={crudParentId}
+        onParentIdChange={setCrudParentId}
+        parentOptions={parentOptions}
+        parentDisplayName={crudParentDisplayName}
+        onSubmit={handleSaveCrud}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Menu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete &quot;{deleteTargetName}&quot; and all of its children from current mock tree?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardShell>
   )
 }
