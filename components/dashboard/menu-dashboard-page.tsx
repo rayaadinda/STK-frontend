@@ -84,7 +84,7 @@ export function MenuDashboardPage() {
               <Select value={selectedRootMenu} onValueChange={setSelectedRootMenu}>
                 <SelectTrigger
                   id="menu-selector"
-                  className="h-24 w-full rounded-xl border-transparent bg-[#e9edf2] px-4 text-xl font-medium text-[#1f2937] shadow-none"
+                  className="w-full rounded-xl border-transparent bg-[#e9edf2] px-4 font-medium text-[#1f2937] shadow-none"
                 >
                   <SelectValue placeholder="system management" />
                 </SelectTrigger>

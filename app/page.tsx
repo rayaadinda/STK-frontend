@@ -1,5 +1,5 @@
-import { MenuDashboardPage } from "@/components/dashboard/menu-dashboard-page"
+import { redirect } from "next/navigation"
 
 export default function Page() {
-  return <MenuDashboardPage />
+  redirect("/systems/menus")
 }

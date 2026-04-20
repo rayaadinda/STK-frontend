@@ -64,13 +64,6 @@ export const menuTree: MenuNode[] = [
   },
 ]
 
-export const sidebarGroupItems = [
-  "System Code",
-  "Properties",
-  "Menus",
-  "API List",
-]
-
 export function collectNodeIds(nodes: MenuNode[]): string[] {
   const ids: string[] = []
 
