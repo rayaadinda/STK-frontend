@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Folder } from "lucide-react"
+import { Folder, LayoutGrid } from "lucide-react"
 import Image from "next/image"
 
 import { buildNodeMeta, collectNodeIds } from "@/components/dashboard/menu-mock-data"
@@ -300,7 +300,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
 
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0f57b8] text-white">
-            <Image src="/submenu.png" alt="Logo" width={24} height={32} />
+            <LayoutGrid size={17} />
           </span>
           <h1 className="text-[42px] font-semibold leading-none tracking-[-0.02em] text-[#1e293b]">
             {title}
