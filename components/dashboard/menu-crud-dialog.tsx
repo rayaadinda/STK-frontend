@@ -1,5 +1,7 @@
 "use client"
 
+import { Loader2 } from "lucide-react"
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +31,7 @@ type MenuCrudDialogProps = {
   onParentIdChange: (value: string | null) => void
   parentOptions: ParentOption[]
   parentDisplayName: string
+  isSubmitting: boolean
   onSubmit: () => void
 }
 
@@ -44,6 +47,7 @@ export function MenuCrudDialog({
   onParentIdChange,
   parentOptions,
   parentDisplayName,
+  isSubmitting,
   onSubmit,
 }: MenuCrudDialogProps) {
   const isEdit = mode === "edit"
@@ -110,8 +114,8 @@ export function MenuCrudDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={onSubmit} disabled={name.trim().length === 0}>
-            Save
+          <Button type="button" onClick={onSubmit} disabled={name.trim().length === 0 || isSubmitting}>
+            {isSubmitting ? <><Loader2 className="animate-spin" /> Saving...</> : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

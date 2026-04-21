@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Folder, LayoutGrid } from "lucide-react"
+import { toast } from "sonner"
 
 import { buildNodeMeta, collectNodeIds } from "@/components/dashboard/menu-mock-data"
 import { MenuCrudDialog, type CrudDialogMode } from "@/components/dashboard/menu-crud-dialog"
@@ -70,6 +71,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
   const [crudParentId, setCrudParentId] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTargetNodeId, setDeleteTargetNodeId] = useState<string | null>(null)
+  const [crudSubmitting, setCrudSubmitting] = useState(false)
 
   useEffect(() => {
     void initialize(scopeKey)
@@ -200,32 +202,41 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
     }
 
     const run = async () => {
-      if (crudMode === "edit" && crudTargetNodeId) {
-        const updatedId = await updateMenuItem(scopeKey, crudTargetNodeId, { name: nextName })
-        if (updatedId) {
-          setSelectedNodeId(updatedId)
+      try {
+        setCrudSubmitting(true)
+        if (crudMode === "edit" && crudTargetNodeId) {
+          const updatedId = await updateMenuItem(scopeKey, crudTargetNodeId, { name: nextName })
+          if (updatedId) {
+            toast.success("Menu updated successfully")
+            setSelectedNodeId(updatedId)
+            setCrudDialogOpen(false)
+          }
+          return
+        }
+
+        const parentId = crudMode === "add-child" ? crudTargetNodeId : crudParentId
+        const createdId = await createMenuItem(scopeKey, {
+          name: nextName,
+          parentId,
+        })
+
+        if (parentId) {
+          setExpandedNodeIds((previous) => {
+            const next = new Set(previous)
+            next.add(parentId)
+            return next
+          })
+        }
+
+        if (createdId) {
+          toast.success("Menu created successfully")
+          setSelectedNodeId(createdId)
           setCrudDialogOpen(false)
         }
-        return
-      }
-
-      const parentId = crudMode === "add-child" ? crudTargetNodeId : crudParentId
-      const createdId = await createMenuItem(scopeKey, {
-        name: nextName,
-        parentId,
-      })
-
-      if (parentId) {
-        setExpandedNodeIds((previous) => {
-          const next = new Set(previous)
-          next.add(parentId)
-          return next
-        })
-      }
-
-      if (createdId) {
-        setSelectedNodeId(createdId)
-        setCrudDialogOpen(false)
+      } catch {
+        toast.error("Something went wrong. Please try again.")
+      } finally {
+        setCrudSubmitting(false)
       }
     }
 
@@ -410,6 +421,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
         onParentIdChange={setCrudParentId}
         parentOptions={parentOptions}
         parentDisplayName={crudParentDisplayName}
+        isSubmitting={crudSubmitting}
         onSubmit={handleSaveCrud}
       />
 
