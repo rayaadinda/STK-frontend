@@ -19,7 +19,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
       <AppSidebar />
 
       <SidebarInset className="min-h-svh bg-[#ffffff]">
-        <header className="sticky top-0 z-20 flex h-14 items-center border-b border-slate-200/70 bg-[#f2f4f7]/95 px-4 backdrop-blur md:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center border-b border-slate-200/70 bg-[#ffffff]/95 px-4 backdrop-blur md:hidden">
           <SidebarTrigger className="text-slate-700 hover:bg-slate-200 hover:text-slate-800" />
         </header>
 

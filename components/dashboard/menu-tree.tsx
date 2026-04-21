@@ -125,7 +125,7 @@ export function MenuTree({
     return (
       <li
         key={`drop-zone-${parentId ?? "root"}-${position}`}
-        className="h-2"
+        className="h-1.5 sm:h-2"
         onDragOver={(event) => setDropAsReorder(event, parentId, position)}
         onDrop={(event) => handleDropAsReorder(event, parentId, position)}
       >
@@ -159,7 +159,7 @@ export function MenuTree({
       <li key={node.id}>
         <div
           className={cn(
-            "relative flex items-center gap-2 rounded-md py-1.5 transition",
+            "relative flex min-w-0 items-center gap-1.5 rounded-md py-1.5 transition sm:gap-2",
             isChildDropTarget && "bg-blue-50",
             isDragging && "opacity-50"
           )}
@@ -200,15 +200,15 @@ export function MenuTree({
             size="sm"
             onClick={() => onSelectNode(node.id)}
             className={cn(
-              "relative h-auto justify-start gap-2 rounded-md px-1 py-0.5 text-left text-[15px] text-slate-700 transition hover:bg-transparent",
+              "relative h-auto min-w-0 flex-1 justify-start gap-2 rounded-md px-1 py-0.5 text-left text-[15px] text-slate-700 transition hover:bg-transparent",
               isSelected && "font-semibold text-slate-900"
             )}
           >
-            <span>{node.name}</span>
+            <span className="truncate">{node.name}</span>
           </Button>
 
           {isSelected ? (
-            <div className="ml-1 flex items-center gap-1">
+            <div className="ml-1 flex shrink-0 items-center gap-1">
               <Button
                 type="button"
                 variant="ghost"
@@ -244,7 +244,7 @@ export function MenuTree({
         </div>
 
         {hasChildren && isExpanded ? (
-          <div className="ml-2 border-l border-[#bcc8d9] pl-5">
+          <div className="ml-1.5 border-l border-[#bcc8d9] pl-3.5 sm:ml-2 sm:pl-5">
             {renderNodeList(node.children ?? [], node.id)}
           </div>
         ) : null}
@@ -253,11 +253,11 @@ export function MenuTree({
   }
 
   return (
-    <div className="overflow-x-auto pr-2 pb-8">
-      <div className="mb-3 text-xs text-slate-500">
+    <div className="overflow-x-auto pr-1 pb-8 sm:pr-2">
+      <div className="mb-3 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
         Drag via handle to move as child, or drop on line to reorder within the same level.
       </div>
-      <div className="min-w-155 text-[15px] md:min-w-0">{renderNodeList(nodes, null)}</div>
+      <div className="min-w-0 text-[15px]">{renderNodeList(nodes, null)}</div>
     </div>
   )
 }

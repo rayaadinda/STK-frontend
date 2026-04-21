@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Folder, LayoutGrid } from "lucide-react"
-import Image from "next/image"
 
 import { buildNodeMeta, collectNodeIds } from "@/components/dashboard/menu-mock-data"
 import { MenuCrudDialog, type CrudDialogMode } from "@/components/dashboard/menu-crud-dialog"
@@ -292,24 +291,24 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
   return (
     <DashboardShell>
       <div className="w-full max-w-none">
-        <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
+        <div className="mb-4 flex items-center gap-2 text-sm text-slate-500 sm:mb-6">
           <Folder size={16} className="text-slate-400" />
           <span>/</span>
           <span className="text-slate-700">{title}</span>
         </div>
 
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-5 flex flex-wrap items-center gap-3 sm:mb-6">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0f57b8] text-white">
             <LayoutGrid size={17} />
           </span>
-          <h1 className="text-[42px] font-semibold leading-none tracking-[-0.02em] text-[#1e293b]">
+          <h1 className="break-words text-4xl font-semibold leading-none tracking-[-0.02em] text-[#1e293b] sm:text-[42px]">
             {title}
           </h1>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <section>
-            <div className="mb-6 w-full max-w-105">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+          <section className="min-w-0">
+            <div className="mb-6 w-full max-w-full sm:max-w-[26rem]">
               <Label htmlFor="menu-selector" className="mb-2.5 block text-sm font-medium text-slate-500">
                 Menu
               </Label>
@@ -338,7 +337,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
                 variant="outline"
                 onClick={openAddRootDialog}
                 disabled={isMutating || isLoading}
-                className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#0f57b8] hover:bg-blue-50"
+                className="h-11 w-full rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#0f57b8] hover:bg-blue-50 sm:w-auto sm:min-w-32"
               >
                 Add Root
               </Button>
@@ -346,7 +345,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
                 type="button"
                 onClick={expandAll}
                 disabled={isMutating || isLoading}
-                className="h-11 min-w-32 rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white hover:bg-[#162338]"
+                className="h-11 w-full rounded-full bg-[#1d2d45] px-6 text-sm font-semibold text-white hover:bg-[#162338] sm:w-auto sm:min-w-32"
               >
                 Expand All
               </Button>
@@ -355,7 +354,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
                 variant="outline"
                 onClick={collapseAll}
                 disabled={isMutating || isLoading}
-                className="h-11 min-w-32 rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#667085] hover:bg-slate-50"
+                className="h-11 w-full rounded-full border-[#b7c2d1] bg-white px-6 text-sm font-semibold text-[#667085] hover:bg-slate-50 sm:w-auto sm:min-w-32"
               >
                 Collapse All
               </Button>
@@ -363,7 +362,7 @@ export function MenuDashboardPage({ title, scopeKey }: MenuDashboardPageProps) {
 
             {errorMessage ? (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <span>{errorMessage}</span>
                   <Button type="button" variant="outline" size="xs" onClick={clearError}>
                     Dismiss

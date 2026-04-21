@@ -16,7 +16,7 @@ export function MenuDetailsPanel({
   name,
 }: MenuDetailsPanelProps) {
   return (
-    <aside className="space-y-3 pt-2 lg:pt-29.5">
+    <aside className="min-w-0 space-y-3 pt-2 lg:pt-24">
       <Field label="Menu ID" value={id} />
       <Field label="Depth" value={String(depth)} />
       <Field label="Parent Data" value={parentName} />
@@ -44,7 +44,7 @@ function Field({ label, value }: { label: string; value: string }) {
         id={inputId}
         readOnly
         value={value}
-        className="h-12 rounded-xl border-transparent bg-[#e9edf2] px-4 text-[40px] font-medium text-[#1f2937] shadow-none"
+        className="h-12 rounded-xl border-transparent bg-[#e9edf2] px-4 text-base font-medium text-[#1f2937] shadow-none sm:text-lg"
       />
     </div>
   )
