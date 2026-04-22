@@ -2,6 +2,11 @@
 
 Frontend dashboard for module-based menu tree CRUD, built with Next.js (App Router), TypeScript, and shadcn/ui.
 
+
+https://github.com/user-attachments/assets/0db0f7b3-f141-4e7e-85ad-414699727d77
+
+
+
 ## Prerequisites
 
 - Node.js 20+
